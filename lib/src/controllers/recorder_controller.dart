@@ -9,7 +9,8 @@ import 'player_controller.dart';
 
 // ignore_for_file: deprecated_member_use_from_same_package
 class RecorderController extends ChangeNotifier {
-  final List<double> _waveData = [];
+  late final List<double> _waveData;
+  final List<double> initialWaveData;
 
   /// At which rate waveform needs to be updated
   Duration updateFrequency = const Duration(milliseconds: 100);
@@ -28,7 +29,7 @@ class RecorderController extends ChangeNotifier {
   /// subtracted and in IOS value added.
   @Deprecated(
     '\nThis is legacy normalizationFactor which was removed'
-    ' in 1.0.0 release. Only use this if you are using legacy normalization',
+        ' in 1.0.0 release. Only use this if you are using legacy normalization',
   )
   double normalizationFactor = Platform.isAndroid ? 60 : 40;
 
@@ -89,7 +90,7 @@ class RecorderController extends ChangeNotifier {
   final ValueNotifier<int> _currentScrolledDuration = ValueNotifier(0);
 
   final StreamController<Duration> _currentDurationController =
-      StreamController.broadcast();
+  StreamController.broadcast();
 
   /// A stream to get current duration of currently recording audio file.
   /// Events are emitted every 50 milliseconds which means current duration is
@@ -98,10 +99,10 @@ class RecorderController extends ChangeNotifier {
   Stream<Duration> get onCurrentDuration => _currentDurationController.stream;
 
   final StreamController<RecorderState> _recorderStateController =
-      StreamController.broadcast();
+  StreamController.broadcast();
 
   final StreamController<Duration> _recordedFileDurationController =
-      StreamController.broadcast();
+  StreamController.broadcast();
 
   /// A Stream to monitor change in RecorderState. Events are emitted whenever
   /// there is change in the RecorderState.
@@ -118,8 +119,9 @@ class RecorderController extends ChangeNotifier {
   ///
   /// Use [useLegacyNormalization] parameter to use normalization before
   /// 1.0.0 release.
-  RecorderController({bool useLegacyNormalization = false}) {
+  RecorderController({bool useLegacyNormalization = false, this.initialWaveData = const []}) {
     _useLegacyNormalization = useLegacyNormalization;
+    _waveData = List.from(initialWaveData);
   }
 
   /// A ValueNotifier which provides current position of scrolled waveform with
@@ -229,7 +231,7 @@ class RecorderController extends ChangeNotifier {
       path: path,
       encoder: androidEncoder?.index ?? this.androidEncoder.index,
       outputFormat:
-          androidOutputFormat?.index ?? this.androidOutputFormat.index,
+      androidOutputFormat?.index ?? this.androidOutputFormat.index,
       sampleRate: sampleRate ?? this.sampleRate,
       bitRate: bitRate ?? this.bitRate,
     );
@@ -315,6 +317,8 @@ class RecorderController extends ChangeNotifier {
   void reset() {
     refresh();
     _waveData.clear();
+    print(initialWaveData);
+    _waveData.addAll(initialWaveData);
     shouldClearLabels = true;
     notifyListeners();
   }
@@ -342,7 +346,7 @@ class RecorderController extends ChangeNotifier {
 
     _timer = Timer.periodic(
       updateFrequency,
-      (timer) async {
+          (timer) async {
         var db = await _getDecibel();
         if (db == null) {
           _recorderState = RecorderState.stopped;
@@ -383,8 +387,8 @@ class RecorderController extends ChangeNotifier {
     // calculates min value
     _currentMin = _waveData.fold(
       0,
-      (previousValue, element) =>
-          element < previousValue ? element : previousValue,
+          (previousValue, element) =>
+      element < previousValue ? element : previousValue,
     );
 
     final scaledWave = (absDb - _currentMin) / (_maxPeak - _currentMin);
