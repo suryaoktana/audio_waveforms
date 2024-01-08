@@ -317,7 +317,6 @@ class RecorderController extends ChangeNotifier {
   void reset() {
     refresh();
     _waveData.clear();
-    print(initialWaveData);
     _waveData.addAll(initialWaveData);
     shouldClearLabels = true;
     notifyListeners();
