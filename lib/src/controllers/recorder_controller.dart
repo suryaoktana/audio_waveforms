@@ -9,7 +9,8 @@ import 'player_controller.dart';
 
 // ignore_for_file: deprecated_member_use_from_same_package
 class RecorderController extends ChangeNotifier {
-  final List<double> _waveData = [];
+  late final List<double> _waveData;
+  final List<double> initialWaveData;
 
   /// At which rate waveform needs to be updated
   Duration updateFrequency = const Duration(milliseconds: 100);
@@ -141,8 +142,9 @@ class RecorderController extends ChangeNotifier {
   ///
   /// Use [useLegacyNormalization] parameter to use normalization before
   /// 1.0.0 release.
-  RecorderController({bool useLegacyNormalization = false}) {
+  RecorderController({bool useLegacyNormalization = false,  this.initialWaveData = const []}) {
     _useLegacyNormalization = useLegacyNormalization;
+    _waveData =List.from(initialWaveData);
   }
 
   /// A ValueNotifier which provides current position of scrolled waveform with
@@ -339,6 +341,7 @@ class RecorderController extends ChangeNotifier {
   void reset() {
     refresh();
     _waveData.clear();
+    _waveData.addAll(initialWaveData);
     _shouldClearLabels = true;
     notifyListeners();
   }
