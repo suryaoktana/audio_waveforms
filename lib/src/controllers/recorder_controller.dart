@@ -9,8 +9,7 @@ import 'player_controller.dart';
 
 // ignore_for_file: deprecated_member_use_from_same_package
 class RecorderController extends ChangeNotifier {
-  late final List<double> _waveData;
-  final List<double> initialWaveData;
+  final List<double> _waveData = [];
 
   /// At which rate waveform needs to be updated
   Duration updateFrequency = const Duration(milliseconds: 100);
@@ -29,7 +28,7 @@ class RecorderController extends ChangeNotifier {
   /// subtracted and in IOS value added.
   @Deprecated(
     '\nThis is legacy normalizationFactor which was removed'
-        ' in 1.0.0 release. Only use this if you are using legacy normalization',
+    ' in 1.0.0 release. Only use this if you are using legacy normalization',
   )
   double normalizationFactor = Platform.isAndroid ? 60 : 40;
 
@@ -69,7 +68,26 @@ class RecorderController extends ChangeNotifier {
   /// user has provided the microphone permission otherwise false.
   bool get hasPermission => _hasPermission;
 
-  bool shouldClearLabels = false;
+  /// IOS only.
+  ///
+  /// Overrides AVAudioSession settings with
+  /// ```
+  /// AVAudioSession.Category: .playAndRecord
+  /// AVAudioSession.CategoryOptions: [.defaultToSpeaker, .allowBluetooth]
+  /// ```
+  /// You may use your implementation to set your preferred configurations.
+  /// Changes to this property will only take effect after you call [record].
+  ///
+  /// **Important**-: If you set this property to false, you will be responsible
+  /// for the setting current configuration. Failed to do so may result in
+  /// audio not being recorded and waves not generating.
+  ///
+  /// Defaults to true.
+  bool overrideAudioSession = true;
+
+  bool get shouldClearLabels => _shouldClearLabels;
+
+  bool _shouldClearLabels = false;
 
   bool _isDisposed = false;
 
@@ -77,20 +95,24 @@ class RecorderController extends ChangeNotifier {
 
   /// Provides currently recorded audio duration. Use [onCurrentDuration]
   /// stream to get latest events duration.
-  Duration elapsedDuration = Duration.zero;
+  Duration get elapsedDuration => _elapsedDuration;
+
+  Duration _elapsedDuration = Duration.zero;
 
   /// Provides duration of recorded audio file when recording has been stopped.
   /// Until recording has been stopped, this duration will be
   /// zero(Duration.zero). Also, once new recording is started this duration
   /// will be reset to zero.
-  Duration recordedDuration = Duration.zero;
+  Duration get recordedDuration => _recordedDuration;
+
+  Duration _recordedDuration = Duration.zero;
 
   Timer? _recorderTimer;
 
   final ValueNotifier<int> _currentScrolledDuration = ValueNotifier(0);
 
   final StreamController<Duration> _currentDurationController =
-  StreamController.broadcast();
+      StreamController.broadcast();
 
   /// A stream to get current duration of currently recording audio file.
   /// Events are emitted every 50 milliseconds which means current duration is
@@ -99,10 +121,10 @@ class RecorderController extends ChangeNotifier {
   Stream<Duration> get onCurrentDuration => _currentDurationController.stream;
 
   final StreamController<RecorderState> _recorderStateController =
-  StreamController.broadcast();
+      StreamController.broadcast();
 
   final StreamController<Duration> _recordedFileDurationController =
-  StreamController.broadcast();
+      StreamController.broadcast();
 
   /// A Stream to monitor change in RecorderState. Events are emitted whenever
   /// there is change in the RecorderState.
@@ -119,9 +141,8 @@ class RecorderController extends ChangeNotifier {
   ///
   /// Use [useLegacyNormalization] parameter to use normalization before
   /// 1.0.0 release.
-  RecorderController({bool useLegacyNormalization = false, this.initialWaveData = const []}) {
+  RecorderController({bool useLegacyNormalization = false}) {
     _useLegacyNormalization = useLegacyNormalization;
-    _waveData = List.from(initialWaveData);
   }
 
   /// A ValueNotifier which provides current position of scrolled waveform with
@@ -151,7 +172,7 @@ class RecorderController extends ChangeNotifier {
   /// Below is the example format to save file with custom name and
   /// extension.
   ///
-  /// eg. /dir1/dir2/file-name.mp3
+  /// eg. /dir1/dir2/file-name.m4a
   ///
   /// How recorder will behave for different RecorderState -:
   ///
@@ -203,6 +224,7 @@ class RecorderController extends ChangeNotifier {
             bitRate: bitRate ?? this.bitRate,
             path: path,
             useLegacyNormalization: _useLegacyNormalization,
+            overrideAudioSession: overrideAudioSession,
           );
           if (_isRecording) {
             _setRecorderState(RecorderState.recording);
@@ -231,7 +253,7 @@ class RecorderController extends ChangeNotifier {
       path: path,
       encoder: androidEncoder?.index ?? this.androidEncoder.index,
       outputFormat:
-      androidOutputFormat?.index ?? this.androidOutputFormat.index,
+          androidOutputFormat?.index ?? this.androidOutputFormat.index,
       sampleRate: sampleRate ?? this.sampleRate,
       bitRate: bitRate ?? this.bitRate,
     );
@@ -295,11 +317,11 @@ class RecorderController extends ChangeNotifier {
         if (audioInfo[1] != null) {
           var duration = int.tryParse(audioInfo[1]!);
           if (duration != null) {
-            recordedDuration = Duration(milliseconds: duration);
+            _recordedDuration = Duration(milliseconds: duration);
             _recordedFileDurationController.add(recordedDuration);
           }
         }
-        elapsedDuration = Duration.zero;
+        _elapsedDuration = Duration.zero;
         _setRecorderState(RecorderState.stopped);
         if (callReset) reset();
         return audioInfo[0];
@@ -317,15 +339,14 @@ class RecorderController extends ChangeNotifier {
   void reset() {
     refresh();
     _waveData.clear();
-    _waveData.addAll(initialWaveData);
-    shouldClearLabels = true;
+    _shouldClearLabels = true;
     notifyListeners();
   }
 
   /// Sets [shouldClearLabels] flag to false.
   void revertClearLabelCall() {
-    ambiguate(WidgetsBinding.instance)?.addPostFrameCallback((_) {
-      shouldClearLabels = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _shouldClearLabels = false;
       notifyListeners();
     });
   }
@@ -336,16 +357,16 @@ class RecorderController extends ChangeNotifier {
 
   /// Gets decibel by every defined frequency
   void _startTimer() {
-    recordedDuration = Duration.zero;
+    _recordedDuration = Duration.zero;
     const duration = Duration(milliseconds: 50);
     _recorderTimer = Timer.periodic(duration, (_) {
-      elapsedDuration += duration;
+      _elapsedDuration += duration;
       _currentDurationController.add(elapsedDuration);
     });
 
     _timer = Timer.periodic(
       updateFrequency,
-          (timer) async {
+      (timer) async {
         var db = await _getDecibel();
         if (db == null) {
           _recorderState = RecorderState.stopped;
@@ -386,8 +407,8 @@ class RecorderController extends ChangeNotifier {
     // calculates min value
     _currentMin = _waveData.fold(
       0,
-          (previousValue, element) =>
-      element < previousValue ? element : previousValue,
+      (previousValue, element) =>
+          element < previousValue ? element : previousValue,
     );
 
     final scaledWave = (absDb - _currentMin) / (_maxPeak - _currentMin);

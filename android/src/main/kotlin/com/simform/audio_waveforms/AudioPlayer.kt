@@ -24,16 +24,18 @@ class AudioPlayer(
     private var isPlayerPrepared: Boolean = false
     private var finishMode = FinishMode.Stop
     private var key = playerKey
-    private var updateFrequency = UpdateFrequency.Low
+    private var updateFrequency:Long = 200
 
     fun preparePlayer(
         result: MethodChannel.Result,
         path: String?,
         volume: Float?,
-        frequency: UpdateFrequency,
+        frequency: Long?,
     ) {
         if (path != null) {
-            updateFrequency = frequency
+            frequency?.let {
+                updateFrequency = it
+            }
             val uri = Uri.parse(path)
             val mediaItem = MediaItem.fromUri(uri)
             player = ExoPlayer.Builder(appContext).build()
@@ -87,6 +89,7 @@ class AudioPlayer(
     fun seekToPosition(result: MethodChannel.Result, progress: Long?) {
         if (progress != null) {
             player?.seekTo(progress)
+            sendCurrentDuration()
             result.success(true)
         } else {
             result.success(false)
@@ -132,7 +135,6 @@ class AudioPlayer(
         }
         isPlayerPrepared = false
         player?.stop()
-        player?.release()
         result.success(true)
     }
 
@@ -144,6 +146,15 @@ class AudioPlayer(
             result.success(true)
         } catch (e: Exception) {
             result.error(Constants.LOG_TAG, "Failed to pause the player", e.toString())
+        }
+
+    }
+    fun release(result: MethodChannel.Result) {
+        try {
+            player?.release()
+            result.success(true)
+        } catch (e: Exception) {
+            result.error(Constants.LOG_TAG, "Failed to release player resource", e.toString())
         }
 
     }
@@ -161,19 +172,24 @@ class AudioPlayer(
         }
     }
 
+    fun setRate(rate: Float?, result: MethodChannel.Result) {
+        try {
+            if (rate != null) {
+                player?.setPlaybackSpeed(rate)
+                result.success(true)
+            } else {
+                result.success(false)
+            }
+        } catch (e: Exception) {
+            result.success(false)
+        }
+    }
+
     private fun startListening(result: MethodChannel.Result) {
         runnable = object : Runnable {
             override fun run() {
-                val currentPosition = player?.currentPosition
-                if (currentPosition != null) {
-                    val args: MutableMap<String, Any?> = HashMap()
-                    args[Constants.current] = currentPosition
-                    args[Constants.playerKey] = key
-                    methodChannel.invokeMethod(Constants.onCurrentDuration, args)
-                    handler.postDelayed(this, updateFrequency.value)
-                } else {
-                    result.error(Constants.LOG_TAG, "Can't get current Position of player", "")
-                }
+                sendCurrentDuration()
+                handler.postDelayed(this, updateFrequency)
             }
         }
         handler.post(runnable!!)
@@ -182,5 +198,14 @@ class AudioPlayer(
 
     private fun stopListening() {
         runnable?.let { handler.removeCallbacks(it) }
+        sendCurrentDuration()
+    }
+
+    private fun sendCurrentDuration() {
+        val currentPosition = player?.currentPosition ?: 0
+        val args: MutableMap<String, Any?> = HashMap()
+        args[Constants.current] = currentPosition
+        args[Constants.playerKey] = key
+        methodChannel.invokeMethod(Constants.onCurrentDuration, args)
     }
 }

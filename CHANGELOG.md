@@ -1,3 +1,34 @@
+## 1.1.2
+
+- Fixed [#350](https://github.com/SimformSolutionsPvtLtd/audio_waveforms/issues/350) - Waveform clipping at starting position
+- Fixed [#304](https://github.com/SimformSolutionsPvtLtd/audio_waveforms/issues/304) - Updated Documentation.
+
+## 1.1.1
+
+- Downgrade flutter_lint version to support flutter version 3.10.x
+
+## 1.1.0
+
+- Update flutter and dart version
+- Fixed [#256](https://github.com/SimformSolutionsPvtLtd/audio_waveforms/issues/256) - Default audio session config causing expected behavior for IOS.
+- Fixed [#303](https://github.com/SimformSolutionsPvtLtd/audio_waveforms/issues/303) - All player has same instances -  thanks [@AlexV525](https://github.com/AlexV525)
+- Fixed incorrect import for shortHash - thanks [@mattbajorek](https://github.com/mattbajorek)
+- Fixed Auto start permission on iOS by waiting for response after user confirms or denies - thanks [@mattbajorek](https://github.com/mattbajorek)
+- Fixed Dispose of instance if all playerKeys are removed - thanks [@mattbajorek](https://github.com/mattbajorek)
+
+## 1.0.5
+
+- Updated gradle file
+- Fixed [#232](https://github.com/SimformSolutionsPvtLtd/audio_waveforms/issues/232) - Last wave flickering 
+- Fixed [#252](https://github.com/SimformSolutionsPvtLtd/audio_waveforms/issues/252) - Android recording doesn't work the first time after granting permissions
+- Fixed [#230](https://github.com/SimformSolutionsPvtLtd/audio_waveforms/issues/230) - Stop player should not be freed the resources
+- Fixed [#165](https://github.com/SimformSolutionsPvtLtd/audio_waveforms/issues/165) - IOS recorder without path not working
+- Fixed [#232](https://github.com/SimformSolutionsPvtLtd/audio_waveforms/issues/232) - Unnecessary rendering
+- Added ability to change audio speed - thanks [@Zubii12](https://github.com/Zubii12) 
+- Fixed stopping a recording immediately after starting it throws multiple exceptions on Android - thanks [@mschudt](https://github.com/mschudt) 
+- Fixed waveform for audios under 1 second not being extractable on Android - thanks [@mschudt](https://github.com/mschudt) 
+- Minor update to docs 
+
 ## 1.0.4
 
 - Fixed [#171](https://github.com/SimformSolutionsPvtLtd/audio_waveforms/issues/171) - Do not call `notifyListeners()` when disposed
